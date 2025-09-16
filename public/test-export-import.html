@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>エクスポート/インポートテスト</title>
+</head>
+<body>
+    <h1>エクスポート/インポートテスト</h1>
+    
+    <h2>エクスポート</h2>
+    <p>プロジェクトID: proj_68c42ca6d0399</p>
+    <a href="api/export.php?project_id=proj_68c42ca6d0399" download>エクスポート実行</a>
+    
+    <hr>
+    
+    <h2>インポート</h2>
+    <form action="api/import.php" method="POST" enctype="multipart/form-data">
+        <input type="file" name="project_file" accept=".zip" required>
+        <button type="submit">インポート実行</button>
+    </form>
+    
+    <hr>
+    
+    <h2>JavaScript テスト</h2>
+    <button id="test-export">JSでエクスポート</button>
+    <button id="test-import">JSでインポート</button>
+    
+    <script>
+        document.getElementById('test-export').addEventListener('click', function() {
+            const downloadLink = document.createElement('a');
+            downloadLink.href = 'api/export.php?project_id=proj_68c42ca6d0399';
+            downloadLink.download = 'test-project.zip';
+            downloadLink.style.display = 'none';
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            alert('エクスポート開始');
+        });
+        
+        document.getElementById('test-import').addEventListener('click', function() {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.zip';
+            fileInput.style.display = 'none';
+            
+            fileInput.addEventListener('change', async function(e) {
+                const file = e.target.files[0];
+                if (!file) {
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('project_file', file);
+                
+                try {
+                    const response = await fetch('api/import.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    console.log(result);
+                    alert(result.success ? 'インポート成功' : 'インポート失敗: ' + result.error);
+                } catch (error) {
+                    console.error(error);
+                    alert('エラー: ' + error.message);
+                }
+            });
+            
+            document.body.appendChild(fileInput);
+            fileInput.click();
+            document.body.removeChild(fileInput);
+        });
+    </script>
+</body>
+</html>

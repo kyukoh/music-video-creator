@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag & Drop Test</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .scene-row {
+            background: white;
+            border: 1px solid #ddd;
+            cursor: move;
+        }
+        .scene-row.dragging {
+            opacity: 0.5;
+        }
+        .scene-row.drag-over {
+            background: #f0f0f0;
+        }
+        td {
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+        .drag-handle {
+            cursor: move;
+            font-size: 20px;
+            user-select: none;
+        }
+        .drop-indicator {
+            height: 3px;
+            background: #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <h1>ドラッグ&ドロップテスト</h1>
+    <table>
+        <tbody id="test-tbody">
+            <tr class="scene-row" draggable="true" data-scene-id="scene1">
+                <td><div class="drag-handle">≡</div></td>
+                <td>シーン 1</td>
+            </tr>
+            <tr class="scene-row" draggable="true" data-scene-id="scene2">
+                <td><div class="drag-handle">≡</div></td>
+                <td>シーン 2</td>
+            </tr>
+            <tr class="scene-row" draggable="true" data-scene-id="scene3">
+                <td><div class="drag-handle">≡</div></td>
+                <td>シーン 3</td>
+            </tr>
+            <tr class="scene-row" draggable="true" data-scene-id="scene4">
+                <td><div class="drag-handle">≡</div></td>
+                <td>シーン 4</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div id="log"></div>
+
+    <script>
+        let draggedRow = null;
+        const logDiv = document.getElementById('log');
+        
+        function log(message) {
+            console.log(message);
+            logDiv.innerHTML = '<p>' + message + '</p>' + logDiv.innerHTML;
+        }
+
+        document.querySelectorAll('.scene-row').forEach(row => {
+            row.addEventListener('dragstart', function(e) {
+                log('Drag started: ' + this.dataset.sceneId);
+                draggedRow = this;
+                this.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', this.dataset.sceneId);
+            });
+
+            row.addEventListener('dragend', function(e) {
+                log('Drag ended: ' + this.dataset.sceneId);
+                this.classList.remove('dragging');
+                draggedRow = null;
+            });
+
+            row.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                if (!draggedRow || draggedRow === this) return;
+                
+                const rect = this.getBoundingClientRect();
+                const midpoint = rect.top + rect.height / 2;
+                
+                if (e.clientY < midpoint) {
+                    this.parentNode.insertBefore(draggedRow, this);
+                } else {
+                    this.parentNode.insertBefore(draggedRow, this.nextSibling);
+                }
+            });
+
+            row.addEventListener('drop', function(e) {
+                e.preventDefault();
+                log('Dropped: ' + e.dataTransfer.getData('text/plain'));
+            });
+        });
+    </script>
+</body>
+</html>
