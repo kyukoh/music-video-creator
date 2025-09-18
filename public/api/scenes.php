@@ -4,7 +4,7 @@ error_reporting(0);
 ini_set('display_errors', '0');
 ini_set('display_startup_errors', '0');
 
-// Set content type to JSON
+// Set default content type to JSON (can be overridden later)
 header('Content-Type: application/json');
 
 // Enable CORS for local development
@@ -46,6 +46,28 @@ function sendResponse(bool $success, $data = null, string $error = '', int $http
 }
 
 /**
+ * Send CSV download response
+ */
+function sendCsvDownload(string $filename, array $rows): void {
+    header('Content-Type: text/csv; charset=UTF-8', true);
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+    header('Pragma: no-cache');
+
+    $output = fopen('php://output', 'w');
+    if ($output === false) {
+        sendResponse(false, null, 'Failed to prepare download stream', 500);
+    }
+
+    foreach ($rows as $row) {
+        fputcsv($output, $row);
+    }
+
+    fclose($output);
+    exit;
+}
+
+/**
  * Get request body as JSON
  */
 function getRequestBody(): array {
@@ -59,11 +81,14 @@ function getRequestBody(): array {
  */
 function validateSceneData(array $data): array {
     $errors = [];
-    
-    if (isset($data['start_time']) && !preg_match('/^\d+:\d{2}$/', $data['start_time'])) {
-        $errors[] = 'Start time must be in format M:SS or MM:SS';
+
+    if (array_key_exists('start_time', $data)) {
+        $startTime = trim((string)$data['start_time']);
+        if ($startTime !== '' && !preg_match('/^\d+:\d{2}$/', $startTime)) {
+            $errors[] = 'Start time must be in format M:SS or MM:SS';
+        }
     }
-    
+
     return $errors;
 }
 
@@ -83,6 +108,7 @@ function parseScenesFromText(string $content): array {
                 'order' => $order++,
                 'start_time' => '0:00',
                 'description' => '',
+                'camera_direction' => '',
                 'image_prompt' => '',
                 'video_prompt' => ''
             ];
@@ -99,28 +125,100 @@ function parseScenesFromExcel(string $filePath): array {
     // For now, we'll implement basic CSV parsing
     // In a full implementation, you might use a library like PhpSpreadsheet
     $scenes = [];
-    
+
     if (($handle = fopen($filePath, 'r')) !== false) {
         // CSVの区切り文字とエンクロージャー、エスケープ文字を明示的に指定
-        $header = fgetcsv($handle, 0, ',', '"', '\\'); // Skip header row
-        $order = 1;
-        
-        while (($data = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
-            // 空の行や不完全な行はスキップ
-            if (count($data) >= 2 && !empty(trim($data[1]))) {
-                $scenes[] = [
-                    'start_time' => isset($data[0]) ? trim($data[0]) : '0:00',
-                    'lyrics' => isset($data[1]) ? trim($data[1]) : '',
-                    'description' => isset($data[2]) ? trim($data[2]) : '',
-                    'image_prompt' => isset($data[3]) ? trim($data[3]) : '',
-                    'video_prompt' => isset($data[4]) ? trim($data[4]) : '',
-                    'order' => $order++
-                ];
+        $headerRow = fgetcsv($handle, 0, ',', '"', '\\');
+        $defaultMap = [
+            'start_time' => 0,
+            'lyrics' => 1,
+            'description' => 2,
+            'camera_direction' => 3,
+            'image_prompt' => 4,
+            'video_prompt' => 5
+        ];
+
+        $columnMap = $defaultMap;
+        $firstDataRow = null;
+
+        if ($headerRow !== false && !empty(array_filter($headerRow, fn($value) => trim((string)$value) !== ''))) {
+            $aliases = [
+                'start_time' => ['start_time', 'start time', '開始時間'],
+                'lyrics' => ['lyrics', 'lyric', '歌詞'],
+                'description' => ['description', 'scene description', 'scenedescription', 'シーン説明', '説明'],
+                'camera_direction' => ['camera_direction', 'camera direction', 'cameradirection', 'カメラ/演出', 'カメラ演出', '演出'],
+                'image_prompt' => ['image_prompt', 'image prompt', 'imageprompt', '英語生成プロンプト', '英語プロンプト', '英語生成'],
+                'video_prompt' => ['video_prompt', 'video prompt', 'videoprompt', '動画生成プロンプト', '動画プロンプト', '動画生成']
+            ];
+
+            $resolvedMap = array_fill_keys(array_keys($defaultMap), null);
+            foreach ($headerRow as $index => $columnName) {
+                $trimmed = trim((string)$columnName);
+                $lower = strtolower($trimmed);
+
+                foreach ($aliases as $field => $aliasList) {
+                    foreach ($aliasList as $alias) {
+                        $aliasLower = strtolower($alias);
+                        if ($lower === $aliasLower || $trimmed === $alias) {
+                            $resolvedMap[$field] = $index;
+                            break 2;
+                        }
+                    }
+                }
+            }
+
+            $matchedCount = count(array_filter($resolvedMap, fn($value) => $value !== null));
+
+            if ($matchedCount >= 2) {
+                foreach ($resolvedMap as $field => $index) {
+                    if ($index !== null) {
+                        $columnMap[$field] = $index;
+                    }
+                }
+            } else {
+                // Header row was actually data; treat it as the first data row
+                $firstDataRow = $headerRow;
             }
         }
+
+        $order = 1;
+        $rows = [];
+
+        if ($firstDataRow !== null) {
+            $rows[] = $firstDataRow;
+        }
+
+        while (($data = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
+            $rows[] = $data;
+        }
+
         fclose($handle);
+
+        foreach ($rows as $data) {
+            if (!is_array($data)) {
+                continue;
+            }
+
+            // 空の行や不完全な行はスキップ
+            $nonEmptyValues = array_filter($data, fn($value) => trim((string)$value) !== '');
+            if (count($data) < 2 || empty($nonEmptyValues) || trim((string)$data[$columnMap['lyrics'] ?? 1] ?? '') === '') {
+                continue;
+            }
+
+            $sceneData = [
+                'start_time' => trim((string)($data[$columnMap['start_time']] ?? '')) ?: '0:00',
+                'lyrics' => trim((string)($data[$columnMap['lyrics']] ?? '')),
+                'description' => trim((string)($data[$columnMap['description']] ?? '')),
+                'camera_direction' => trim((string)($data[$columnMap['camera_direction']] ?? '')),
+                'image_prompt' => trim((string)($data[$columnMap['image_prompt']] ?? '')),
+                'video_prompt' => trim((string)($data[$columnMap['video_prompt']] ?? '')),
+                'order' => $order++
+            ];
+
+            $scenes[] = $sceneData;
+        }
     }
-    
+
     return $scenes;
 }
 
@@ -232,6 +330,7 @@ try {
             // Get scenes for a project or specific scene
             $projectId = $_GET['project_id'] ?? null;
             $sceneId = $_GET['id'] ?? null;
+            $action = $_GET['action'] ?? null;
             
             if (!$projectId) {
                 sendResponse(false, null, 'Project ID is required', 400);
@@ -241,6 +340,33 @@ try {
             $project = Project::load($projectId);
             if (!$project) {
                 sendResponse(false, null, 'Project not found', 404);
+            }
+
+            if ($action === 'export') {
+                $scenes = Scene::getAllByProject($projectId);
+                $rows = [
+                    ['start_time', 'lyrics', 'description', 'camera_direction', 'image_prompt', 'video_prompt'],
+                ];
+
+                foreach ($scenes as $scene) {
+                    $rows[] = [
+                        $scene->getStartTime(),
+                        $scene->getLyrics(),
+                        $scene->getDescription(),
+                        $scene->getCameraDirection(),
+                        $scene->getImagePrompt(),
+                        $scene->getVideoPrompt(),
+                    ];
+                }
+
+                $safeName = preg_replace('/[^A-Za-z0-9\-_]+/', '_', $project->getName());
+                $safeName = trim($safeName, '_');
+                if ($safeName === '') {
+                    $safeName = 'project';
+                }
+                $filename = sprintf('%s_scenes_%s.csv', $safeName, date('Ymd_His'));
+
+                sendCsvDownload($filename, $rows);
             }
             
             if ($sceneId) {
@@ -299,9 +425,31 @@ try {
                 
                 // Create scene
                 $scene = new Scene($projectId);
+
+                // Determine insertion point relative to an existing scene (if provided)
+                $referenceSceneId = $data['reference_scene_id'] ?? null;
+                $position = strtolower($data['position'] ?? 'after');
+                if (!in_array($position, ['before', 'after'], true)) {
+                    $position = 'after';
+                }
+
+                if ($referenceSceneId) {
+                    $referenceScene = Scene::load($projectId, $referenceSceneId);
+                    if (!$referenceScene) {
+                        sendResponse(false, null, 'Reference scene not found', 404);
+                    }
+
+                    $targetOrder = max(1, $referenceScene->getOrder());
+                    $insertOrder = $position === 'before' ? $targetOrder : $targetOrder + 1;
+                    $scene->setOrder($insertOrder);
+                } elseif (isset($data['order'])) {
+                    $scene->setOrder(max(1, (int)$data['order']));
+                }
+
                 if (isset($data['start_time'])) $scene->setStartTime($data['start_time']);
                 if (isset($data['lyrics'])) $scene->setLyrics($data['lyrics']);
                 if (isset($data['description'])) $scene->setDescription($data['description']);
+                if (isset($data['camera_direction'])) $scene->setCameraDirection($data['camera_direction']);
                 if (isset($data['image_prompt'])) $scene->setImagePrompt($data['image_prompt']);
                 if (isset($data['video_prompt'])) $scene->setVideoPrompt($data['video_prompt']);
                 

@@ -1813,11 +1813,17 @@ function renderSceneListView(scenes) {
                     </div>
                 </div>
                 <div class="flex items-center space-x-3">
+                    <button id="export-scenes-btn" class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        シーンダウンロード
+                    </button>
                     <button id="upload-scenes-btn" class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                         </svg>
-                        シーンファイル
+                        シーンアップロード
                     </button>
                     <button id="media-library-btn" class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1849,7 +1855,7 @@ function renderSceneListView(scenes) {
                                 <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">開始時間</th>
                                 <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">歌詞</th>
                                 <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">シーン説明</th>
-                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">英語プロンプト</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">カメラ/演出</th>
                                 <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">操作</th>
                             </tr>
                         </thead>
@@ -1897,13 +1903,21 @@ function renderSceneRows(scenes) {
                 data-scene-id="${scene.id}" 
                 data-order="${scene.order}">
                 <td class="px-6 py-4">
-                    <div class="drag-handle text-gray-400 hover:text-gray-600 cursor-move" title="ドラッグして並び替え">
-                        ≡
+                    <div class="flex items-center space-x-2">
+                        <div class="drag-handle text-gray-400 hover:text-gray-600 cursor-move" title="ドラッグして並び替え">
+                            ≡
+                        </div>
+                        <button type="button" class="edit-scene-btn p-1 text-gray-400 hover:text-blue-600 transition-colors" 
+                                data-scene-id="${scene.id}" title="シーン詳細を編集">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L7 20.5 3 21.5l1-4L16.732 3.732z"></path>
+                            </svg>
+                        </button>
                     </div>
                 </td>
-                <td class="px-6 py-4 cursor-pointer" onclick="openSceneDetail('${scene.id}')">
+                <td class="px-6 py-4">
                     <div class="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden hover:shadow-md transition-shadow" 
-                         title="クリックして詳細編集">
+                         title="シーンプレビュー">
                         ${thumbnailUrl ? 
                             `<img src="${thumbnailUrl}" alt="サムネイル" class="w-full h-full object-cover">` :
                             `<div class="w-full h-full flex items-center justify-center text-gray-400">
@@ -1914,7 +1928,7 @@ function renderSceneRows(scenes) {
                         }
                     </div>
                 </td>
-                <td class="px-6 py-4 cursor-pointer" onclick="openSceneDetail('${scene.id}')">
+                <td class="px-6 py-4">
                     <input type="text" onclick="event.stopPropagation()" 
                            class="scene-field inline-edit w-20 text-sm" 
                            data-scene-id="${scene.id}" 
@@ -1922,34 +1936,52 @@ function renderSceneRows(scenes) {
                            value="${Utils.escapeHtml(scene.start_time || '')}"
                            placeholder="0:00">
                 </td>
-                <td class="px-6 py-4 cursor-pointer" onclick="openSceneDetail('${scene.id}')">
+                <td class="px-6 py-4">
                     <textarea class="scene-field inline-edit w-full text-sm resize-none" onclick="event.stopPropagation()" 
                               data-scene-id="${scene.id}" 
                               data-field="lyrics"
                               rows="2"
                               placeholder="歌詞を入力...">${Utils.escapeHtml(scene.lyrics || '')}</textarea>
                 </td>
-                <td class="px-6 py-4 cursor-pointer" onclick="openSceneDetail('${scene.id}')">
+                <td class="px-6 py-4">
                     <textarea class="scene-field inline-edit w-full text-sm resize-none" onclick="event.stopPropagation()" 
                               data-scene-id="${scene.id}" 
                               data-field="description"
                               rows="2"
                               placeholder="シーン説明を入力...">${Utils.escapeHtml(scene.description || '')}</textarea>
                 </td>
-                <td class="px-6 py-4 cursor-pointer" onclick="openSceneDetail('${scene.id}')">
+                <td class="px-6 py-4">
                     <textarea class="scene-field inline-edit w-full text-sm resize-none" onclick="event.stopPropagation()" 
                               data-scene-id="${scene.id}" 
-                              data-field="image_prompt"
+                              data-field="camera_direction"
                               rows="2"
-                              placeholder="英語プロンプトを入力...">${Utils.escapeHtml(scene.image_prompt || '')}</textarea>
+                              placeholder="カメラワークや演出のメモを入力...">${Utils.escapeHtml(scene.camera_direction || '')}</textarea>
                 </td>
                 <td class="px-6 py-4" onclick="event.stopPropagation()">
-                    <button class="delete-scene-btn p-1 text-gray-400 hover:text-red-600 transition-colors" 
-                            data-scene-id="${scene.id}" title="削除">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                    </button>
+                    <div class="flex items-center justify-end space-x-1">
+                        <button type="button"
+                                class="add-scene-relative-btn add-scene-before-btn p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                                data-scene-id="${scene.id}" data-position="before" title="このシーンの上に追加">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m7-7H5"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4"></path>
+                            </svg>
+                        </button>
+                        <button type="button"
+                                class="add-scene-relative-btn add-scene-after-btn p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                                data-scene-id="${scene.id}" data-position="after" title="このシーンの下に追加">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m7-7H5"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 15l4 4 4-4"></path>
+                            </svg>
+                        </button>
+                        <button type="button" class="delete-scene-btn p-1 text-gray-400 hover:text-red-600 transition-colors" 
+                                data-scene-id="${scene.id}" title="削除">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -1977,10 +2009,38 @@ function setupSceneListEventListeners() {
     if (uploadScenesBtn) {
         uploadScenesBtn.addEventListener('click', showSceneFileUploadModal);
     }
-    
+
+    const exportScenesBtn = document.getElementById('export-scenes-btn');
+    if (exportScenesBtn) {
+        exportScenesBtn.addEventListener('click', exportScenes);
+    }
+
+    // シーン編集ボタン
+    document.querySelectorAll('.edit-scene-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const sceneId = this.dataset.sceneId;
+            if (sceneId) {
+                openSceneDetail(sceneId);
+            }
+        });
+    });
+
     // インライン編集のイベントリスナー
     setupInlineEditListeners();
     
+    // シーン挿入ボタン
+    document.querySelectorAll('.add-scene-relative-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const sceneId = this.dataset.sceneId;
+            const position = this.dataset.position || 'after';
+            addNewScene(sceneId, position);
+        });
+    });
+
     // シーン削除ボタン
     document.querySelectorAll('.delete-scene-btn').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -1998,6 +2058,14 @@ function setupSceneListEventListeners() {
  */
 function setupInlineEditListeners() {
     document.querySelectorAll('.scene-field').forEach(field => {
+        field.addEventListener('compositionstart', function() {
+            this.dataset.isComposing = 'true';
+        });
+
+        field.addEventListener('compositionend', function() {
+            delete this.dataset.isComposing;
+        });
+
         // フォーカス時
         field.addEventListener('focus', function() {
             this.classList.add('editing');
@@ -2015,10 +2083,17 @@ function setupInlineEditListeners() {
         
         // Enterキー処理（textareaの場合はShift+Enter以外）
         field.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && this.tagName.toLowerCase() !== 'textarea') {
+            const tagName = this.tagName.toLowerCase();
+            const composing = e.isComposing || this.dataset.isComposing === 'true';
+
+            if (composing) {
+                return;
+            }
+
+            if (e.key === 'Enter' && tagName !== 'textarea') {
                 e.preventDefault();
                 this.blur();
-            } else if (e.key === 'Enter' && this.tagName.toLowerCase() === 'textarea' && !e.shiftKey) {
+            } else if (e.key === 'Enter' && tagName === 'textarea' && !e.shiftKey) {
                 e.preventDefault();
                 this.blur();
             }
@@ -2087,23 +2162,42 @@ async function saveSceneField(fieldElement) {
 /**
  * 新規シーン追加
  */
-async function addNewScene() {
+async function addNewScene(reference = null, position = 'after') {
     try {
-        Loading.show('シーンを追加中...');
+        let referenceSceneId = reference;
+        if (referenceSceneId && typeof referenceSceneId === 'object') {
+            if (typeof referenceSceneId.preventDefault === 'function') {
+                referenceSceneId.preventDefault();
+            }
+            referenceSceneId = null;
+        }
+
+        if (position !== 'before' && position !== 'after') {
+            position = 'after';
+        }
+
+        const isRelativeInsert = Boolean(referenceSceneId);
+        Loading.show(isRelativeInsert ? 'シーンを挿入中...' : 'シーンを追加中...');
         
         const newSceneData = {
             project_id: AppState.currentProject.id,
             start_time: '',
             lyrics: '',
             description: '',
+            camera_direction: '',
             image_prompt: '',
             video_prompt: ''
         };
+
+        if (isRelativeInsert) {
+            newSceneData.reference_scene_id = referenceSceneId;
+            newSceneData.position = position;
+        }
         
         const response = await API.post('api/scenes.php', newSceneData);
         
         if (response.success) {
-            Notification.success('新しいシーンを追加しました');
+            Notification.success(isRelativeInsert ? '新しいシーンを挿入しました' : '新しいシーンを追加しました');
             
             // シーン一覧を再読み込み
             await loadSceneListView(AppState.currentProject.id);
@@ -2114,6 +2208,72 @@ async function addNewScene() {
         
     } catch (error) {
         Notification.error('シーンの追加に失敗しました: ' + error.message);
+    } finally {
+        Loading.hide();
+    }
+}
+
+/**
+ * シーンダウンロード
+ */
+async function exportScenes(event) {
+    try {
+        if (event && typeof event.preventDefault === 'function') {
+            event.preventDefault();
+        }
+
+        if (!AppState.currentProject) {
+            throw new Error('プロジェクトが選択されていません');
+        }
+
+        Loading.show('シーンファイルを生成しています...');
+
+        const url = `api/scenes.php?action=export&project_id=${encodeURIComponent(AppState.currentProject.id)}`;
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'text/csv,application/json'
+            }
+        });
+
+        if (!response.ok) {
+            let errorMessage = 'エクスポートに失敗しました';
+            const contentType = response.headers.get('Content-Type') || '';
+            const text = await response.text();
+            if (contentType.includes('application/json')) {
+                try {
+                    const json = JSON.parse(text);
+                    errorMessage = json.error?.message || json.error || errorMessage;
+                } catch (_) {
+                    // ignore parse error
+                }
+            }
+            throw new Error(errorMessage);
+        }
+
+        const blob = await response.blob();
+        let filename = `scenes_${AppState.currentProject.id}_${Date.now()}.csv`;
+
+        const disposition = response.headers.get('Content-Disposition');
+        if (disposition) {
+            const match = disposition.match(/filename="?([^";]+)"?/i);
+            if (match && match[1]) {
+                filename = decodeURIComponent(match[1]);
+            }
+        }
+
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(downloadUrl);
+
+        Notification.success('シーンファイルをエクスポートしました');
+    } catch (error) {
+        Notification.error('シーンファイルのエクスポートに失敗しました: ' + error.message);
     } finally {
         Loading.hide();
     }
@@ -2210,6 +2370,13 @@ async function openSceneDetail(sceneId) {
                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" 
                                       rows="2"
                                       placeholder="シーン説明を入力...">${Utils.escapeHtml(scene.description || '')}</textarea>
+                        </div>
+                        <div class="mt-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">カメラ/演出</label>
+                            <textarea id="scene-camera-direction" 
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" 
+                                      rows="2"
+                                      placeholder="カメラワークや演出の指示を入力...">${Utils.escapeHtml(scene.camera_direction || '')}</textarea>
                         </div>
                     </div>
                     
@@ -2386,6 +2553,7 @@ async function saveSceneDetail(sceneId) {
             start_time: document.getElementById('scene-start-time').value,
             lyrics: document.getElementById('scene-lyrics').value,
             description: document.getElementById('scene-description').value,
+            camera_direction: document.getElementById('scene-camera-direction').value,
             image_prompt: document.getElementById('image-prompt').value,
             video_prompt: document.getElementById('video-prompt').value,
             image_file_id: document.getElementById('image-file-id').value || '',
@@ -2684,13 +2852,14 @@ function showSceneFileUploadModal() {
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">シーンファイル</label>
-                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                        <input type="file" id="scene-file-input" accept=".txt,.csv" class="hidden">
+                    <div id="scene-file-dropzone" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors">
+                        <input type="file" id="scene-file-input" accept=".txt,.csv,.xlsx,.xls" class="hidden">
                         <div class="space-y-2">
                             <svg class="w-8 h-8 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                             </svg>
-                            <p class="text-sm text-gray-600">テキストファイル（.txt）またはCSVファイル（.csv）を選択</p>
+                            <p class="text-sm text-gray-600">テキスト（.txt）/CSV（.csv）/Excel（.xlsx, .xls）ファイルを選択</p>
+                            <p class="text-xs text-gray-400">ファイルをドラッグ＆ドロップしてアップロードできます</p>
                             <button type="button" onclick="document.getElementById('scene-file-input').click()" 
                                     class="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors">
                                 ファイル選択
@@ -2706,7 +2875,7 @@ function showSceneFileUploadModal() {
                     <h4 class="text-sm font-medium text-blue-900 mb-2">ファイル形式について</h4>
                     <ul class="text-xs text-blue-800 space-y-1">
                         <li>• <strong>テキストファイル（.txt）:</strong> 歌詞を改行で区切って記述</li>
-                        <li>• <strong>CSVファイル（.csv）:</strong> 開始時間,歌詞,説明,プロンプトの形式</li>
+                        <li>• <strong>CSV/Excel（.csv/.xlsx/.xls）:</strong> 開始時間,歌詞,シーン説明,カメラ/演出,英語生成プロンプト,動画生成プロンプト の順で列を配置</li>
                     </ul>
                 </div>
                 
@@ -2727,23 +2896,82 @@ function showSceneFileUploadModal() {
     Modal.create('シーンファイルアップロード', modalContent);
     
     // ファイル選択の処理
-    document.getElementById('scene-file-input').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        const fileInfo = document.getElementById('selected-file-info');
-        
+    const fileInput = document.getElementById('scene-file-input');
+    const fileInfo = document.getElementById('selected-file-info');
+    const dropzone = document.getElementById('scene-file-dropzone');
+    const allowedExtensions = ['txt', 'csv', 'xlsx', 'xls'];
+
+    function updateSelectedFile(file) {
         if (file) {
             fileInfo.classList.remove('hidden');
             fileInfo.querySelector('p').textContent = `選択されたファイル: ${file.name} (${Utils.formatFileSize(file.size)})`;
         } else {
             fileInfo.classList.add('hidden');
         }
+    }
+
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        updateSelectedFile(file);
     });
-    
+
+    if (dropzone) {
+        const highlight = () => {
+            dropzone.classList.add('border-blue-400', 'bg-blue-50');
+            dropzone.classList.remove('border-gray-300');
+        };
+        const unhighlight = () => {
+            dropzone.classList.remove('border-blue-400', 'bg-blue-50');
+            dropzone.classList.add('border-gray-300');
+        };
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, event => {
+                event.preventDefault();
+                event.stopPropagation();
+                highlight();
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, event => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (eventName === 'drop') {
+                    const files = event.dataTransfer?.files;
+                    if (files && files.length > 0) {
+                        const file = files[0];
+                        const ext = file.name.split('.').pop()?.toLowerCase() || '';
+                        if (!allowedExtensions.includes(ext)) {
+                            Notification.error('対応していないファイル形式です。txt/csv/xlsx/xlsをご利用ください');
+                            unhighlight();
+                            return;
+                        }
+
+                        try {
+                            const dataTransfer = new DataTransfer();
+                            dataTransfer.items.add(file);
+                            fileInput.files = dataTransfer.files;
+                        } catch (error) {
+                            try {
+                                fileInput.files = files;
+                            } catch (_) {
+                                // ignore if assignment fails; user can fall back to manual selection
+                            }
+                        }
+
+                        updateSelectedFile(file);
+                    }
+                }
+                unhighlight();
+            });
+        });
+    }
+
     // フォーム送信の処理
     document.getElementById('scene-file-upload-form').addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        const fileInput = document.getElementById('scene-file-input');
         const file = fileInput.files[0];
         
         if (!file) {

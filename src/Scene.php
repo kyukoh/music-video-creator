@@ -7,6 +7,7 @@ class Scene {
     private string $startTime;
     private string $lyrics;
     private string $description;
+    private string $cameraDirection;
     private string $imagePrompt;
     private string $videoPrompt;
     private ?string $imageFileId;
@@ -22,6 +23,7 @@ class Scene {
         $this->startTime = '0:00';
         $this->lyrics = '';
         $this->description = '';
+        $this->cameraDirection = '';
         $this->imagePrompt = '';
         $this->videoPrompt = '';
         $this->imageFileId = null;
@@ -59,13 +61,44 @@ class Scene {
                 break;
             }
         }
-        
-        // If not found, add new scene
+        unset($scene);
+
+        // If not found, insert new scene at the requested position
         if (!$found) {
-            $this->order = count($scenes['scenes']) + 1;
-            $scenes['scenes'][] = $this->toArray();
+            $currentCount = count($scenes['scenes']);
+            $insertIndex = null;
+
+            if ($this->order > 0) {
+                $insertIndex = $this->order - 1;
+                if ($insertIndex < 0) {
+                    $insertIndex = 0;
+                }
+                if ($insertIndex > $currentCount) {
+                    $insertIndex = $currentCount;
+                }
+            }
+
+            if ($insertIndex === null) {
+                $insertIndex = $currentCount;
+            }
+
+            $this->order = $insertIndex + 1;
+            array_splice($scenes['scenes'], $insertIndex, 0, [$this->toArray()]);
         }
-        
+
+        // Ensure scene orders stay sequential
+        foreach ($scenes['scenes'] as $index => &$sceneData) {
+            $sceneData['order'] = $index + 1;
+            if ($sceneData['id'] === $this->id) {
+                $this->order = $sceneData['order'];
+                $sceneData['updated_at'] = $this->updatedAt;
+                if (!isset($sceneData['created_at'])) {
+                    $sceneData['created_at'] = $this->createdAt;
+                }
+            }
+        }
+        unset($sceneData);
+
         return file_put_contents($scenesFile, json_encode($scenes, JSON_PRETTY_PRINT)) !== false;
     }
     
@@ -81,6 +114,9 @@ class Scene {
         }
         if (isset($data['description'])) {
             $this->description = $data['description'];
+        }
+        if (isset($data['camera_direction'])) {
+            $this->cameraDirection = $data['camera_direction'];
         }
         if (isset($data['image_prompt'])) {
             $this->imagePrompt = $data['image_prompt'];
@@ -240,6 +276,7 @@ class Scene {
         $scene->startTime = $data['start_time'] ?? '0:00';
         $scene->lyrics = $data['lyrics'] ?? '';
         $scene->description = $data['description'] ?? '';
+        $scene->cameraDirection = $data['camera_direction'] ?? '';
         $scene->imagePrompt = $data['image_prompt'] ?? '';
         $scene->videoPrompt = $data['video_prompt'] ?? '';
         $scene->imageFileId = $data['image_file_id'] ?? null;
@@ -260,6 +297,7 @@ class Scene {
             'start_time' => $this->startTime,
             'lyrics' => $this->lyrics,
             'description' => $this->description,
+            'camera_direction' => $this->cameraDirection,
             'image_prompt' => $this->imagePrompt,
             'video_prompt' => $this->videoPrompt,
             'image_file_id' => $this->imageFileId,
@@ -276,6 +314,7 @@ class Scene {
     public function getStartTime(): string { return $this->startTime; }
     public function getLyrics(): string { return $this->lyrics; }
     public function getDescription(): string { return $this->description; }
+    public function getCameraDirection(): string { return $this->cameraDirection; }
     public function getImagePrompt(): string { return $this->imagePrompt; }
     public function getVideoPrompt(): string { return $this->videoPrompt; }
     public function getImageFileId(): ?string { return $this->imageFileId; }
@@ -288,6 +327,7 @@ class Scene {
     public function setStartTime(string $startTime): void { $this->startTime = $startTime; }
     public function setLyrics(string $lyrics): void { $this->lyrics = $lyrics; }
     public function setDescription(string $description): void { $this->description = $description; }
+    public function setCameraDirection(string $cameraDirection): void { $this->cameraDirection = $cameraDirection; }
     public function setImagePrompt(string $imagePrompt): void { $this->imagePrompt = $imagePrompt; }
     public function setVideoPrompt(string $videoPrompt): void { $this->videoPrompt = $videoPrompt; }
     
